@@ -1,4 +1,4 @@
-# inferra.rs
+# <img src="docs/logo.png" width="30" height="30" style="vertical-align: middle" alt=""> inferra.rs
 
 > Build, inspect, and understand LLM inference in Rust.
 

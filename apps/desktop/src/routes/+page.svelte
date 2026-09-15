@@ -26,7 +26,10 @@
 
 <div class="shell">
   <header>
-    <h1>Inferra</h1>
+    <div class="brand">
+      <img src="/logo.png" alt="" width="28" height="28" />
+      <h1>Inferra</h1>
+    </div>
     <div class="status" data-state={modelState.status}>
       <span class="dot"></span>
       {statusText[modelState.status]}
@@ -139,6 +142,15 @@
     justify-content: space-between;
     padding: 0.9rem 1.4rem;
     border-bottom: 1px solid var(--surface-raised);
+    flex-shrink: 0;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+  .brand img {
+    border-radius: 7px;
     flex-shrink: 0;
   }
   h1 {
