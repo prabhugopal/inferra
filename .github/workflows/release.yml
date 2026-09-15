@@ -1,0 +1,62 @@
+name: release
+
+# Triggered by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+#
+# macOS only, on purpose: inferra-mistral enables mistralrs's `accelerate`
+# feature (Apple's Accelerate.framework), which doesn't exist on Linux or
+# Windows — this project has never been built or tested on either, so this
+# workflow doesn't pretend to support them. Builds both Apple Silicon and
+# Intel, since Accelerate itself is available on both.
+#
+# Unsigned for now: no Apple Developer signing identity is configured, so
+# the resulting .app/.dmg will show a Gatekeeper "unidentified developer"
+# warning on first launch (right-click -> Open bypasses it once). Revisit
+# if this ever needs wider, unassisted distribution.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+          - target: x86_64-apple-darwin
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: install bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: install frontend dependencies
+        working-directory: apps/desktop
+        run: bun install
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Inferra ${{ github.ref_name }}'
+          releaseBody: |
+            Unsigned build — macOS will show an "unidentified developer"
+            warning on first launch. Right-click the app and choose Open
+            once to bypass it.
+          releaseDraft: true
+          prerelease: false
+          uploadUpdaterJson: false
+          args: --target ${{ matrix.target }}
