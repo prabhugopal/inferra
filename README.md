@@ -8,6 +8,8 @@ the reference runtime, embedded directly in-process (no server, no HTTP hop).
 Two applications sit on the same backend-neutral core: a CLI and a Tauri +
 Svelte desktop app.
 
+![Inferra desktop app — loading a model, chatting with live token/KV-cache tracking, and browsing Hugging Face Hub](docs/demo.gif)
+
 ## Architecture
 
 ```mermaid
@@ -154,15 +156,33 @@ cargo run -p inferra-cli -- \
 
 **Desktop:**
 
+Requires [Rust](https://rustup.rs) and [Bun](https://bun.sh) installed first.
+
 ```bash
 cd apps/desktop
 bun install
 bun run tauri dev
 ```
 
-Pick a local GGUF file from the sidebar (auto-loads on selection); optionally
-override the tokenizer/chat-template source under "Manual configuration" for
-GGUFs that don't embed their own.
+`tauri dev` compiles in debug mode by default — fine for UI work, but the
+unoptimized build is dramatically slower for actual generation (expect
+seconds per token instead of tens of milliseconds, especially for quantized
+models). For a real read on inference speed, run `bun run tauri dev --release`
+instead; it's the same hot-reloading dev session, just with an optimized
+backend. The first release build compiles the whole dependency tree from
+scratch and can take several minutes — later runs are fast, since Cargo
+caches `target/release` the same way it caches `target/debug`.
+
+Two ways to pick a model, both in the sidebar:
+
+- **Choose a GGUF file…** — pick a file you already have locally (auto-loads
+  on selection); override the tokenizer/chat-template source under "Manual
+  configuration" for GGUFs that don't embed their own.
+- **Browse models** tab — search Hugging Face Hub directly from the app (GGUF,
+  text-generation models only), see real parameter count/architecture/context
+  length inline, and load a model straight off the Hub with no separate
+  download step. Good starting point if you don't have a GGUF file yet:
+  search "smollm2" for something small enough to try immediately.
 
 ## Verify locally
 
