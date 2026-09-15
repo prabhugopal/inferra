@@ -1,0 +1,1132 @@
+<title>Inferra Architecture Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #eef1f5;
+    --ink: #14181f;
+    --ink-muted: #5b6472;
+    --ink-faint: #8993a3;
+    --line: #e2e5ea;
+    --signal: #2a5fd6;
+    --signal-soft: #e8eefc;
+    --accent-2: #d9622a;
+    --accent-2-soft: #fbeae0;
+    --good: #1a8a4a;
+    --good-soft: #e5f4ec;
+    --critical: #c23b3b;
+    --critical-soft: #fbe9e9;
+    --line-strong: #cbd0d9;
+    --shadow: 0 1px 2px rgba(20, 24, 31, 0.06);
+    --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", "Cascadia Code", monospace;
+
+    /* Code blocks keep a fixed dark "terminal" surface regardless of page
+       theme — deliberate, not a missed dark-mode pairing — so these are
+       never redefined below. */
+    --code-bg: #131826;
+    --code-ink: #e7ecf7;
+    --code-muted: #7c8aa8;
+    --code-line: #232d47;
+    --code-accent: #7fb0f2;
+    --code-string: #f0a878;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #0f1420;
+      --surface: #161c2c;
+      --surface-2: #1f2740;
+      --ink: #eef1f8;
+      --ink-muted: #98a2b3;
+      --ink-faint: #6b7486;
+      --line: #232b3d;
+      --signal: #5b93ea;
+      --signal-soft: #1c2c4d;
+      --accent-2: #e8804a;
+      --accent-2-soft: #3a2818;
+      --good: #3fbd7e;
+      --good-soft: #12301f;
+      --critical: #e8706e;
+      --critical-soft: #3a1a1a;
+      --line-strong: #2c3650;
+      --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #0f1420;
+    --surface: #161c2c;
+    --surface-2: #1f2740;
+    --ink: #eef1f8;
+    --ink-muted: #98a2b3;
+    --ink-faint: #6b7486;
+    --line: #232b3d;
+    --signal: #5b93ea;
+    --signal-soft: #1c2c4d;
+    --accent-2: #e8804a;
+    --accent-2-soft: #3a2818;
+    --good: #3fbd7e;
+    --good-soft: #12301f;
+    --critical: #e8706e;
+    --critical-soft: #3a1a1a;
+    --line-strong: #2c3650;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+  h1, h2, h3, h4 { text-wrap: balance; font-weight: 600; }
+  code, pre, .mono { font-family: var(--font-mono); }
+  a { color: var(--signal); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 780px);
+    justify-content: center;
+    gap: 3rem;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 6rem;
+  }
+
+  /* ---------- sidebar / TOC ---------- */
+  aside {
+    position: sticky;
+    top: 3rem;
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .brand .kicker {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  .brand h1 {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+  nav.toc {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    border-left: 2px solid var(--line);
+    padding-left: 0.9rem;
+  }
+  nav.toc a {
+    color: var(--ink-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    padding: 0.3rem 0;
+  }
+  nav.toc a:hover { color: var(--signal); }
+
+  .stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--line);
+  }
+  .stack-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .pill {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--ink-muted);
+    border: 1px solid var(--line);
+  }
+
+  /* ---------- main content ---------- */
+  main { min-width: 0; }
+  .doc-header { margin-bottom: 2.5rem; }
+  .doc-header .kicker {
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--signal);
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+  }
+  .doc-header h1 {
+    font-size: 2.1rem;
+    margin: 0 0 0.7rem;
+    letter-spacing: -0.01em;
+  }
+  .doc-header p.lede {
+    font-size: 1.05rem;
+    color: var(--ink-muted);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  section { margin: 3.2rem 0; scroll-margin-top: 2rem; }
+  section > h2 {
+    font-size: 1.35rem;
+    margin: 0 0 0.4rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--line);
+  }
+  section > .section-dek {
+    color: var(--ink-muted);
+    max-width: 68ch;
+    margin: 0.6rem 0 1.4rem;
+  }
+  h3 { font-size: 1.02rem; margin: 1.6rem 0 0.6rem; }
+  p { max-width: 70ch; }
+  p + p { margin-top: 0.9rem; }
+
+  /* ---------- tables ---------- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 0.65rem 0.9rem; vertical-align: top; border-bottom: 1px solid var(--line); }
+  thead th {
+    background: var(--surface-2);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.path, td.file { font-family: var(--font-mono); font-size: 0.82rem; color: var(--signal); white-space: nowrap; }
+  td.types { font-family: var(--font-mono); font-size: 0.78rem; color: var(--ink-muted); }
+
+  /* ---------- diagrams: hand-built box/arrow, not mermaid/ascii ---------- */
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.6rem;
+    overflow-x: auto;
+  }
+  .diagram-caption { margin-top: 0.7rem; font-size: 0.82rem; color: var(--ink-faint); max-width: none; }
+  .diagram-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 600;
+    margin: 0 0 0.9rem;
+  }
+
+  .arch-diagram { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: max-content; }
+  .arch-row { display: flex; gap: 0.8rem; flex-wrap: nowrap; justify-content: center; width: 100%; }
+  .arch-box {
+    flex: 1 1 0;
+    min-width: 140px;
+    max-width: 240px;
+    padding: 0.7rem 0.8rem;
+    border-radius: 8px;
+    border: 1.5px solid var(--line-strong);
+    background: var(--paper);
+    text-align: center;
+  }
+  .arch-box .t { font-size: 0.78rem; font-weight: 600; color: var(--ink); font-family: var(--font-mono); }
+  .arch-box .s { display: block; font-size: 0.68rem; color: var(--ink-faint); margin-top: 0.2rem; }
+  .arch-box.front { border-color: var(--signal); background: var(--signal-soft); }
+  .arch-box.engine { border-color: var(--signal); background: var(--signal-soft); max-width: 300px; border-width: 2px; }
+  .arch-box.ext { border-style: dashed; color: var(--ink-faint); }
+  .arch-box.later { border-style: dashed; opacity: 0.7; }
+  .arch-connector { color: var(--ink-faint); font-size: 0.82rem; line-height: 1; padding: 0.45rem 0; text-align: center; }
+
+  .flow { display: flex; align-items: stretch; gap: 0; min-width: max-content; }
+  .flow-box {
+    flex-shrink: 0;
+    min-width: 118px;
+    padding: 0.65rem 0.75rem;
+    background: var(--paper);
+    border: 1.5px solid var(--line-strong);
+    border-radius: 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.2rem;
+  }
+  .flow-box .t { font-size: 0.72rem; font-weight: 600; color: var(--ink); font-family: var(--font-mono); }
+  .flow-box .s { font-size: 0.62rem; color: var(--ink-faint); font-family: var(--font-mono); }
+  .flow-box.tinted { background: var(--signal-soft); border-color: var(--signal); }
+  .flow-arrow { flex-shrink: 0; width: 28px; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); font-size: 0.95rem; }
+
+  /* ---------- callouts (the two real bugs) ---------- */
+  .incident {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--critical);
+    border-radius: 10px;
+    padding: 1.1rem 1.3rem;
+    margin: 1.2rem 0;
+  }
+  .incident .badge {
+    grid-column: 1;
+    align-self: start;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--critical-soft);
+    color: var(--critical);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    white-space: nowrap;
+  }
+  .incident h4 { grid-column: 2; margin: 0; font-size: 0.98rem; }
+  /* Everything after the badge+title header spans the full width — code
+     blocks and spec tables need real room, not the narrow badge column
+     CSS Grid auto-placement would otherwise drop them into. */
+  .incident > p,
+  .incident > .code-block,
+  .incident > .spec-table {
+    grid-column: 1 / -1;
+    margin: 0.5rem 0 0;
+  }
+  .incident > p { font-size: 0.9rem; color: var(--ink-muted); max-width: none; }
+  .incident code { font-size: 0.83rem; background: var(--surface-2); padding: 0.05rem 0.35rem; border-radius: 4px; color: var(--ink); }
+  .incident.note { border-left-color: var(--signal); }
+  .incident.note .badge { background: var(--signal-soft); color: var(--signal); }
+
+  /* ---------- prefill vs decode comparison ---------- */
+  .compare { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1.2rem 0; }
+  .compare-card { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--line-strong); border-radius: 10px; padding: 1rem 1.1rem; }
+  .compare-card.prefill { border-top-color: var(--signal); }
+  .compare-card.decode { border-top-color: var(--accent-2); }
+  .compare-card h4 { margin: 0 0 0.6rem; font-size: 0.92rem; }
+  .compare-card dl { margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+  .compare-card dt { font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-faint); }
+  .compare-card dd { margin: 0.1rem 0 0; font-size: 0.85rem; color: var(--ink); }
+  .compare-card dd.num { font-family: var(--font-mono); font-weight: 600; }
+
+  /* ---------- spec table (worked example) ---------- */
+  .spec-table { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 1rem 0; }
+  .spec-cell { background: var(--surface); padding: 0.75rem 0.9rem; }
+  .spec-cell .k { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-faint); margin-bottom: 0.25rem; }
+  .spec-cell .v { font-family: var(--font-mono); font-size: 0.88rem; font-weight: 600; color: var(--ink); }
+
+  /* ---------- capability cards ---------- */
+  .cap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cap-card { background: var(--surface); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; }
+  .cap-card h4 { margin: 0; font-size: 0.92rem; }
+  .cap-card p { margin: 0; font-size: 0.83rem; color: var(--ink-muted); max-width: none; }
+  .cap-card .status {
+    align-self: flex-start;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+  }
+  .status.wired { background: var(--good-soft); color: var(--good); }
+  .status.available { background: var(--surface-2); color: var(--ink-muted); }
+
+  /* ---------- code blocks: fixed dark terminal surface ---------- */
+  .code-block {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--code-line);
+    box-shadow: var(--shadow);
+  }
+  .code-block .label {
+    background: #0e1220;
+    color: var(--code-muted);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    padding: 0.5rem 0.9rem;
+    border-bottom: 1px solid var(--code-line);
+  }
+  .code-block pre {
+    margin: 0;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 0.9rem 1rem;
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .code-block pre .c { color: var(--code-muted); }
+  .code-block pre .k { color: var(--code-accent); }
+  .code-block pre .s { color: var(--code-string); }
+
+  /* ---------- milestone list ---------- */
+  ul.milestones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  ul.milestones li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.8rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    font-size: 0.9rem;
+  }
+  ul.milestones li:last-child { border-bottom: none; }
+  .m-status {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    width: 4.6rem;
+    text-align: center;
+  }
+  .m-status.done { background: var(--good-soft); color: var(--good); }
+  .m-status.next { background: var(--signal-soft); color: var(--signal); }
+  .m-status.later { background: var(--surface-2); color: var(--ink-faint); }
+  ul.milestones .m-text b { font-weight: 600; }
+  ul.milestones .m-text span { color: var(--ink-muted); }
+
+  footer { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 0.8rem; }
+
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; }
+    aside { position: static; }
+    nav.toc { display: none; }
+  }
+</style>
+
+<div class="layout">
+  <aside>
+    <div class="brand">
+      <span class="kicker">Reference</span>
+      <h1>Inferra</h1>
+    </div>
+    <nav class="toc">
+      <a href="#running">Running locally</a>
+      <a href="#overview">Overview</a>
+      <a href="#how-inference-works">How inference works</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#rust-modules">Rust module map</a>
+      <a href="#frontend-modules">Frontend module map</a>
+      <a href="#streaming">Streaming workflow</a>
+      <a href="#bugs">Bugs found &amp; fixed</a>
+      <a href="#capabilities">mistral.rs capabilities</a>
+      <a href="#milestones">Milestones</a>
+    </nav>
+    <div class="stack">
+      <span class="stack-label">Stack</span>
+      <div class="pill-row">
+        <span class="pill">Rust workspace</span>
+        <span class="pill">mistral.rs (embedded)</span>
+        <span class="pill">Tauri 2</span>
+        <span class="pill">SvelteKit 5</span>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="doc-header">
+      <div class="kicker">Architecture guide</div>
+      <h1>Build, inspect, and understand LLM inference in Rust</h1>
+      <p class="lede">
+        A learning-oriented, production-shaped workspace built around
+        <code>mistral.rs</code> embedded directly in-process — no server, no
+        HTTP hop. Two applications, a CLI and a Tauri + Svelte desktop app,
+        sit on the same backend-neutral core.
+      </p>
+    </header>
+
+    <section id="running">
+      <h2>Running locally</h2>
+      <p class="section-dek">Get it running first — the guide below explains what's happening under the hood.</p>
+      <div class="incident note">
+        <span class="badge">Prerequisites</span>
+        <p>
+          <code>mistralrs</code> is a plain crates.io dependency pinned to
+          <code>"0.8"</code> (resolves to <code>0.8.1</code>) — deliberately
+          <em>not</em> the newer <code>0.9.x</code> line; see the "Bugs
+          found" entry below for why. First build still compiles the whole
+          <code>mistralrs-core</code>/<code>candle</code> dependency tree,
+          which takes a few minutes. Avoid running another
+          <code>cargo check</code>/<code>clippy</code>/<code>test</code> at
+          the same time as a build or a generation you're timing — that
+          dependency tree is heavy enough that concurrent cargo processes
+          will starve each other for CPU and make things look far slower
+          than they are.
+        </p>
+      </div>
+      <h3>CLI</h3>
+      <div class="code-block">
+        <div class="label">bash</div>
+        <pre><span class="k">cargo run</span> -p inferra-cli -- \
+  --model-dir /path/to/gguf/dir \
+  --gguf-file model.Q4_K_M.gguf \
+  generate <span class="s">"What is inference? Answer in one sentence."</span>
+
+<span class="c"># streaming, with real time-to-first-token:</span>
+<span class="k">cargo run</span> -p inferra-cli -- \
+  --model-dir /path/to/gguf/dir --gguf-file model.Q4_K_M.gguf \
+  generate --stream <span class="s">"What is inference?"</span></pre>
+      </div>
+
+      <h3>Desktop</h3>
+      <div class="code-block">
+        <div class="label">bash</div>
+        <pre><span class="k">cd</span> apps/desktop
+<span class="k">bun install</span>
+<span class="k">bun run</span> tauri dev</pre>
+      </div>
+
+      <h3>Verify</h3>
+      <div class="code-block">
+        <div class="label">bash</div>
+        <pre><span class="k">cargo fmt</span> --all --check
+<span class="k">cargo check</span> --workspace
+<span class="k">cargo test</span> --workspace
+<span class="k">cargo clippy</span> --workspace --all-targets -- -D warnings
+
+<span class="k">cd</span> apps/desktop && <span class="k">bun run</span> check && <span class="k">bun run</span> build</pre>
+      </div>
+    </section>
+
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>
+        The rule that matters across this whole workspace: applications only
+        ever know <code>inferra-core</code>'s neutral types —
+        <code>GenerationRequest</code>, <code>GenerationResult</code>,
+        <code>GenerationEvent</code>, <code>Usage</code> — never
+        <code>mistralrs</code> types, never Candle tensors.
+        <code>inferra-mistral</code> is the <em>only</em> crate that imports
+        <code>mistralrs</code>. That keeps the runtime replaceable (a direct
+        Candle backend can implement the same <code>InferenceBackend</code>
+        trait later) and gives every consumer — CLI, desktop, any future one
+        — an identical API.
+      </p>
+
+      <div class="diagram">
+        <div class="diagram-label">The boundary, compiler-enforced</div>
+        <div class="arch-diagram">
+          <div class="arch-row">
+            <div class="arch-box front" style="max-width: 640px"><span class="t">CLI · Desktop · inferra-app · inferra-ui-bridge · inferra-core</span><span class="s">only ever see GenerationRequest / Result / Event / Usage</span></div>
+          </div>
+          <div class="arch-connector">↓ &nbsp;the only crate with <code>mistralrs</code> in its Cargo.toml&nbsp; ↓</div>
+          <div class="arch-row">
+            <div class="arch-box engine"><span class="t">inferra-mistral</span><span class="s">translates neutral types ↔ mistralrs types, one direction each way</span></div>
+          </div>
+          <div class="arch-connector">↓</div>
+          <div class="arch-row">
+            <div class="arch-box ext"><span class="t">mistralrs</span><span class="s">the actual SDK — RequestBuilder, SamplingParams, Response, …</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="diagram-caption">Not a convention someone has to remember — no other crate's Cargo.toml lists <code>mistralrs</code>, so importing it anywhere else simply fails to compile.</p>
+
+      <div class="incident note">
+        <span class="badge">Worked example</span>
+        <h4>The NaN/Infinity bug, fixed in exactly one place</h4>
+        <p>
+          mistral.rs can report <code>inf</code>/<code>NaN</code> for a
+          tok/s rate when a timing denominator is near-zero (see
+          <a href="#bugs">Bugs found</a>) — a detail only <code>inferra-mistral</code>
+          needs to know exists, because it's the only crate touching
+          mistralrs's raw <code>Usage</code> struct.
+        </p>
+        <div class="code-block">
+          <div class="label">crates/inferra-mistral/src/lib.rs</div>
+          <pre><span class="c">// Some(value) only if finite — None is the correct "not available"</span>
+<span class="c">// value here, not a workaround.</span>
+<span class="k">fn</span> finite(value: f32) -> Option&lt;f32&gt; {
+    value.is_finite().then_some(value)
+}</pre>
+        </div>
+        <p>
+          Had <code>mistralrs::Usage</code> leaked into <code>inferra-core</code>
+          directly, this same defensive check would've needed duplicating
+          everywhere that read a rate: the CLI's printer, the Tauri bridge,
+          the frontend's formatter. Instead it exists exactly once.
+        </p>
+      </div>
+    </section>
+
+    <section id="how-inference-works">
+      <h2>How inference actually works</h2>
+      <p class="section-dek">
+        Two very different phases hide behind one "Generate" button — and
+        the prefill/decode split in Session metrics is those two phases,
+        not two speeds at the same task.
+      </p>
+
+      <div class="diagram">
+        <div class="diagram-label">The generation loop</div>
+        <div class="flow">
+          <div class="flow-box"><span class="t">Tokenize</span><span class="s">text → token IDs</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box tinted"><span class="t">Prefill</span><span class="s">whole prompt, one batched pass</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">Sample</span><span class="s">logits → next token</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box tinted"><span class="t">Decode</span><span class="s">one token, KV cache lookup</span></div>
+          <div class="flow-arrow">↻</div>
+        </div>
+      </div>
+      <p class="diagram-caption">Decode loops — sample, feed the new token back in, decode again — until an end token or the token budget runs out.</p>
+
+      <div class="compare">
+        <div class="compare-card prefill">
+          <h4>Prefill</h4>
+          <dl>
+            <dt>Bound by</dt>
+            <dd>Compute — dense parallel matmul</dd>
+            <dt>Model passes</dt>
+            <dd>1 batched pass, every prompt token at once</dd>
+            <dt>This session's own run</dt>
+            <dd class="num">39 tok in 0.741s → 52.6 tok/s</dd>
+          </dl>
+        </div>
+        <div class="compare-card decode">
+          <h4>Decode</h4>
+          <dl>
+            <dt>Bound by</dt>
+            <dd>Memory bandwidth — weights + KV cache streamed per token</dd>
+            <dt>Model passes</dt>
+            <dd>1 sequential pass per generated token</dd>
+            <dt>This session's own run</dt>
+            <dd class="num">23 tok in 2.523s → 9.1 tok/s</dd>
+          </dl>
+        </div>
+      </div>
+
+      <h3>Prefill: process the whole prompt at once</h3>
+      <p>
+        Every prompt token goes through all of the model's transformer
+        layers in a single batched forward pass. This is compute-bound and
+        highly parallel — the hardware is doing dense matrix multiplication
+        across every prompt token simultaneously, so more tokens barely
+        slows it down per-token.
+      </p>
+
+      <h3>Decode: generate exactly one token at a time</h3>
+      <p>
+        Each new token depends on every token generated before it, so these
+        forward passes can't be batched the way prefill's can — one token
+        in, one token out, every step, all layers, again. This is
+        <strong>memory-bandwidth-bound, not compute-bound</strong>: the
+        bottleneck is streaming the model's weights (and the growing KV
+        cache) through memory once per token, not the arithmetic itself.
+        That's the actual reason decode is slower than prefill on identical
+        hardware — an inherent property of autoregressive generation, not
+        an inefficiency.
+      </p>
+
+      <h3>The KV cache</h3>
+      <p>
+        Visible in every run's logs as <code>"Prefix caching enabled"</code>:
+        during prefill, the model computes a key and value vector for every
+        prompt token at every layer and caches them. During decode, each new
+        token only computes its own key/value and attends against the
+        cache — it never recomputes attention over tokens already seen.
+        Without it, decode would cost as much as reprocessing the entire
+        prompt from scratch at every single step.
+      </p>
+
+      <h3>Sampling</h3>
+      <p>
+        Once the model produces logits — one score per vocabulary token —
+        for the next position, <code>SamplingParams</code> decides which
+        token actually gets picked.
+        <code>temperature</code> rescales the logits before the softmax:
+        <code>0</code> collapses it to always the single highest-probability
+        token (greedy — our default). <code>top_p</code> (nucleus sampling)
+        restricts candidates to the smallest set whose cumulative
+        probability exceeds that threshold before sampling from it.
+      </p>
+      <div class="code-block">
+        <div class="label">crates/inferra-mistral/src/lib.rs — build_chat_request</div>
+        <pre>chat_request.set_sampling(<span class="k">SamplingParams</span> {
+    temperature: <span class="k">Some</span>(options.temperature <span class="k">as</span> f64),
+    top_p: <span class="k">Some</span>(options.top_p <span class="k">as</span> f64),
+    max_len: <span class="k">Some</span>(options.max_new_tokens <span class="k">as</span> usize),
+    ..SamplingParams::neutral()
+})</pre>
+      </div>
+
+      <div class="incident note">
+        <span class="badge">Worked example</span>
+        <h4>SmolLM2-135M, this workspace's own test model</h4>
+        <p>Real GGUF metadata and a real measured run — not illustrative numbers.</p>
+        <div class="spec-table">
+          <div class="spec-cell"><span class="k">Model</span><span class="v">SmolLM2-135M (HuggingFaceTB)</span></div>
+          <div class="spec-cell"><span class="k">Arch. template</span><span class="v">llama-style, 30 layers</span></div>
+          <div class="spec-cell"><span class="k">Attention</span><span class="v">9 heads / 3 KV (GQA)</span></div>
+          <div class="spec-cell"><span class="k">Embedding dim</span><span class="v">576</span></div>
+          <div class="spec-cell"><span class="k">Vocab</span><span class="v">49,152 (BPE)</span></div>
+          <div class="spec-cell"><span class="k">Context</span><span class="v">8,192 tokens</span></div>
+          <div class="spec-cell"><span class="k">Prefill</span><span class="v">39 tok in 0.741s → 52.6 tok/s</span></div>
+          <div class="spec-cell"><span class="k">Decode</span><span class="v">23 tok in 2.523s → 9.1 tok/s</span></div>
+          <div class="spec-cell"><span class="k">Ratio</span><span class="v">prefill ≈ 5.8× faster, per-token</span></div>
+        </div>
+        <p style="margin-top: 0.8rem">
+          "llama-style" names the <em>architecture template</em> mistral.rs read
+          from this GGUF's own metadata (<code>general.architecture: llama</code>)
+          — the transformer design (RMSNorm, RoPE, SwiGLU, grouped-query
+          attention), not Meta's LLaMA model. SmolLM2 is a separate model from
+          HuggingFace, independently trained, that happens to reuse that same
+          architecture — common across the GGUF/llama.cpp ecosystem, where many
+          unrelated models converge on this one template.
+        </p>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p class="section-dek">Dependency direction flows one way: apps depend on the core contract, never on mistral.rs directly.</p>
+      <div class="diagram">
+        <div class="diagram-label">Dependency direction</div>
+        <div class="arch-diagram">
+          <div class="arch-row">
+            <div class="arch-box front"><span class="t">inferra-cli</span><span class="s">terminal, arg parsing</span></div>
+            <div class="arch-box front"><span class="t">desktop (Tauri)</span><span class="s">invoke("…")</span></div>
+          </div>
+          <div class="arch-connector">↓ &nbsp;via InferenceService / FrontendBridge&nbsp; ↓</div>
+          <div class="arch-row">
+            <div class="arch-box engine"><span class="t">InferenceBackend trait</span><span class="s">inferra-core — the neutral contract</span></div>
+          </div>
+          <div class="arch-connector">↓</div>
+          <div class="arch-row">
+            <div class="arch-box"><span class="t">MistralRsBackend</span><span class="s">inferra-mistral — only crate that imports mistralrs</span></div>
+            <div class="arch-box later"><span class="t">direct Candle backend</span><span class="s">later — same trait</span></div>
+          </div>
+          <div class="arch-connector">↓ &nbsp;in-process, no HTTP&nbsp; ↓</div>
+          <div class="arch-row">
+            <div class="arch-box ext"><span class="t">mistral.rs</span><span class="s">the mistralrs crate</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="diagram-caption">Only <code>inferra-mistral</code> imports <code>mistralrs</code> — everything above it speaks the neutral contract.</p>
+    </section>
+
+    <section id="rust-modules">
+      <h2>Module map — Rust workspace</h2>
+      <p class="section-dek">Every crate's job, in one sentence, and the types worth knowing.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:20%">Crate / path</th><th>What it does</th><th style="width:22%">Key types</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="path">crates/<br>inferra-core</td>
+              <td>The neutral contract every layer above depends on. Defines chat messages, sampling options, results, the streaming event enum, errors, and the <code>InferenceBackend</code> trait itself. Knows nothing about mistral.rs.</td>
+              <td class="types">ChatMessage, GenerationRequest/Result, Usage, GenerationEvent, TokenLogprob, InferenceBackend</td>
+            </tr>
+            <tr>
+              <td class="path">crates/<br>inferra-mistral</td>
+              <td>The only crate that touches <code>mistralrs</code>. Loads a local GGUF file in-process via <code>GgufModelBuilder</code>, implementing both <code>generate</code> (<code>send_chat_request</code>) and <code>generate_stream</code> (<code>stream_chat_request</code>, with <code>return_logprobs(true)</code> set). Synthesizes the final result from accumulated stream chunks — see <a href="#bugs">Bugs found</a>.</td>
+              <td class="types">MistralRsBackend, build_chat_request, map_usage</td>
+            </tr>
+            <tr>
+              <td class="path">crates/<br>inferra-app</td>
+              <td>Thin backend-independent service. Holds an <code>Arc&lt;dyn InferenceBackend&gt;</code> and exposes <code>generate</code>/<code>generate_stream</code>/<code>model_info</code> — nothing else. What the CLI talks to directly.</td>
+              <td class="types">InferenceService</td>
+            </tr>
+            <tr>
+              <td class="path">crates/<br>inferra-ui-bridge</td>
+              <td>UI-facing DTOs. Converts <code>GenerationResult</code> → <code>GenerateView</code> (friendlier field names/units), and maps the core <code>GenerationEvent</code> stream into a tagged <code>GenerateStreamEvent</code> a JS <code>Channel</code> can consume directly. Depends on nothing Tauri-specific.</td>
+              <td class="types">FrontendBridge, GenerateCommand, GenerateView, GenerateStreamEvent</td>
+            </tr>
+            <tr>
+              <td class="path">crates/<br>inferra-gguf</td>
+              <td>Isolated GGUF header inspection (magic, version, tensor/metadata counts), unrelated to the inference path. A later milestone grows this into real tensor enumeration.</td>
+              <td class="types">read_header, GgufHeader</td>
+            </tr>
+            <tr>
+              <td class="path">apps/<br>inferra-cli</td>
+              <td>Parses args, builds a <code>GenerationRequest</code>, calls <code>InferenceService</code> directly — no Tauri, no bridge. <code>generate --stream</code> exercises the same streaming path as the desktop app and prints real time-to-first-token.</td>
+              <td class="types">Cli, Command</td>
+            </tr>
+            <tr>
+              <td class="path">apps/desktop/<br>src-tauri</td>
+              <td>Tauri commands (<code>load_model</code>, <code>generate</code>, <code>generate_stream</code>, <code>model_info</code>) — thin wrappers around <code>FrontendBridge</code>. Owns zero model configuration. <code>generate_stream</code> forwards each event over a <code>tauri::ipc::Channel</code> as it arrives.</td>
+              <td class="types">AppState, generate_stream command</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="frontend-modules">
+      <h2>Module map — desktop frontend</h2>
+      <p class="section-dek"><code>apps/desktop/src</code> — every file's job.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th style="width:24%">File</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td class="file">lib/api.ts</td><td>The only file that knows the Tauri command names/argument shapes. Wraps <code>invoke()</code> for <code>load_model</code>/<code>model_info</code>/<code>generate</code>, and wraps <code>generate_stream</code> + a <code>Channel</code> into a callback-based <code>generateStream()</code>.</td></tr>
+            <tr><td class="file">lib/state.svelte.ts</td><td>One shared <code>modelState</code> (unloaded/loading/ready/error + info/error) — single source of truth for whether generation is possible.</td></tr>
+            <tr><td class="file">lib/persist.ts</td><td><code>localStorage</code>-backed "recent models" (up to 5), keyed by model dir + GGUF filename. Best-effort, never load-bearing.</td></tr>
+            <tr><td class="file">lib/history.svelte.ts</td><td>Session-only array of every completed generation's real metrics — feeds the gauge and both bar charts.</td></tr>
+            <tr><td class="file">lib/live.svelte.ts</td><td>The in-flight generation's token-arrival trace (real measured timestamps) plus token budget — feeds the live line chart.</td></tr>
+            <tr><td class="file">lib/logprobs.svelte.ts</td><td>Per-token confidence for the current/last generation (probability = <code>e^logprob</code>) — feeds the Token confidence report. Reset per generation, same pattern as <code>live.svelte.ts</code>.</td></tr>
+            <tr><td class="file">lib/format.ts</td><td>Small null-safe formatters (seconds, tok/s, token counts) shared by the metrics components.</td></tr>
+            <tr><td class="file">lib/ModelLoader.svelte</td><td>Sidebar: native file-picker that auto-loads on pick, recent-models list (auto-loads, no-ops if already active), collapsed manual-config fallback.</td></tr>
+            <tr><td class="file">lib/Chat.svelte</td><td>Prompt form and response. Drives <code>generateStream</code>; <code>busy</code> is set from the terminal event itself, not the outer promise, to avoid a display race.</td></tr>
+            <tr><td class="file">lib/MarkdownText.svelte</td><td>Renders fenced code blocks in the response distinctly from prose. No <code>@html</code> directive anywhere — model output only ever goes through plain Svelte text interpolation, so there's no HTML-injection surface.</td></tr>
+            <tr><td class="file">lib/LiveTrace.svelte</td><td>Live line chart, fixed pixels-per-second on x and fixed token-budget denominator on y — deliberately not rescaled to a running max (see <a href="#bugs">Bugs found</a>).</td></tr>
+            <tr><td class="file">lib/TokenConfidence.svelte</td><td>Per-token probability table for the current generation — a report, not inline coloring on the response text (only the chosen token's confidence is shown; see <a href="#capabilities">capabilities</a>).</td></tr>
+            <tr><td class="file">lib/Gauge.svelte, Metrics.svelte</td><td>Ring gauge (decode tok/s as % of session peak) and stat tiles for the latest completed generation.</td></tr>
+            <tr><td class="file">lib/HistoryChart.svelte, LatencyChart.svelte</td><td>Session-long bar charts: decode throughput per run, and a prefill/decode stacked-time breakdown — both straight from <code>Usage</code>.</td></tr>
+            <tr><td class="file">routes/+page.svelte</td><td>App shell: header status dot, sidebar + tabbed content (Chat/Live vs. Session metrics — both stay mounted, hidden via CSS), and the dark-first token palette every component consumes.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="streaming">
+      <h2>The streaming path, end to end</h2>
+      <p class="section-dek">The one flow worth understanding in full — it crosses every layer, and was the source of every real bug below.</p>
+      <div class="diagram">
+        <div class="diagram-label">1 — kicking off a generation</div>
+        <div class="flow">
+          <div class="flow-box"><span class="t">Chat.svelte</span><span class="s">invoke()</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">generate_stream</span><span class="s">Tauri command</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">FrontendBridge</span><span class="s">ui-bridge</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">InferenceService</span><span class="s">inferra-app</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box tinted"><span class="t">MistralRsBackend</span><span class="s">.generate_stream</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">stream_chat_request</span><span class="s">mistral.rs</span></div>
+        </div>
+
+        <div class="diagram-label" style="margin-top: 1.6rem">2 — each token, streamed back</div>
+        <div class="flow">
+          <div class="flow-box"><span class="t">Response::Chunk</span><span class="s">mistral.rs</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box tinted"><span class="t">GenerationEvent::Token</span><span class="s">MistralRsBackend</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">GenerateStreamEvent::Token</span><span class="s">FrontendBridge</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">tauri::ipc::Channel</span><span class="s">send()</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><span class="t">channel.onmessage</span><span class="s">Chat.svelte</span></div>
+        </div>
+      </div>
+      <p class="diagram-caption">
+        Step 2 repeats per token until the stream ends — with no terminal
+        <code>Response::Done</code> from mistral.rs (see <a href="#bugs">Bugs found</a>),
+        <code>MistralRsBackend</code> treats that exhaustion itself as
+        "done," synthesizes the result from what it accumulated, and sends
+        one final <code>GenerateStreamEvent::Done</code> down the same path.
+      </p>
+    </section>
+
+    <section id="bugs">
+      <h2>Bugs found &amp; fixed</h2>
+      <p class="section-dek">Discovered by testing against a real model, not assumed — each one changed how the code works, not just papered over a symptom.</p>
+
+      <div class="incident">
+        <span class="badge">Silent failure</span>
+        <h4>mistral.rs's stream never sends a terminal <code>Done</code></h4>
+        <p>
+          It just stops emitting <code>Chunk</code>s, carrying
+          <code>usage</code>/<code>finish_reason</code> on the <em>last</em>
+          chunk instead. The original code only matched
+          <code>Response::Done</code>, so it fell through silently — tokens
+          streamed and printed fine, then nothing: no final result, no
+          metrics. Fixed by accumulating text and last-seen usage as chunks
+          arrive, treating stream exhaustion itself as the completion signal,
+          and synthesizing <code>Done</code> — falling back to an actual
+          <code>Response::Done</code> if one does show up on some path.
+        </p>
+      </div>
+
+      <div class="incident">
+        <span class="badge">Silent failure</span>
+        <h4>Non-finite tok/s rates broke JSON serialization</h4>
+        <p>
+          A near-zero timing denominator can make mistral.rs report
+          <code>inf</code>/<code>NaN</code> for a rate, which
+          <code>serde_json</code> refuses to encode — silently breaking the
+          Tauri <code>Channel</code> send, which was itself being discarded
+          with <code>let _ = on_event.send(event)</code>. Fixed on both ends:
+          <code>map_usage</code> converts any non-finite rate to
+          <code>None</code> (the correct "not available" value), and the
+          Tauri command now surfaces a send failure as a real error instead
+          of swallowing it.
+        </p>
+      </div>
+
+      <div class="incident">
+        <span class="badge">Display bug</span>
+        <h4>A race between the terminal event and the invoke promise</h4>
+        <p>
+          <code>busy</code> was set to <code>false</code> when the outer
+          <code>invoke()</code> promise resolved — not guaranteed to happen
+          after the "Done" event had already set <code>result</code>. If the
+          promise settled first, the UI briefly showed neither the streaming
+          text nor the final result. Fixed by setting <code>busy</code>
+          directly inside the <code>Done</code>/<code>Error</code> handlers.
+        </p>
+      </div>
+
+      <div class="incident">
+        <span class="badge">Chart bug</span>
+        <h4>The live chart rescaled to its own running max every frame</h4>
+        <p>
+          Both axes were normalized to the latest point's own value, so the
+          newest point was always pinned to the right edge and older points
+          kept shrinking left — reading exactly like the line growing
+          backward. Fixed with a fixed pixels-per-second x-scale and a fixed
+          token-budget y-scale (the request's actual <code>max_new_tokens</code>),
+          so a point's position never moves once plotted.
+        </p>
+      </div>
+
+      <div class="incident">
+        <span class="badge">Upstream bug — fixed in 0.9.3</span>
+        <h4>Greedy sampling reported a "logprob" that wasn't one — confidence over 100%</h4>
+        <p>
+          The exact path, by type and field name: we call
+          <code>RequestBuilder::return_logprobs(true)</code>; streaming
+          responses carry it on <code>ChunkChoice.logprobs: Option&lt;ResponseLogprob&gt;</code>,
+          where <code>ResponseLogprob { token: String, logprob: f32, .. }</code>
+          is the field we read. At <code>temperature: 0</code> (this app's
+          default), mistral.rs internally routes to
+          <code>sampler.rs::sample_argmax</code> — and on the
+          <code>mistralrs 0.8</code> line that function never called softmax:
+        </p>
+        <div class="code-block">
+          <div class="label">mistralrs-core/src/sampler.rs — sample_argmax (0.8.7, broken)</div>
+          <pre><span class="c">// "probs" is the raw model output — never normalized</span>
+<span class="k">let</span> probs: Vec&lt;f32&gt; = logits.to_vec1()?;
+<span class="k">let</span> next_token = argmax_f32(&probs);
+<span class="k">let</span> logprob = probs[next_token <span class="k">as</span> usize].log(<span class="s">10.0</span>);</pre>
+        </div>
+        <p>Working backwards from a real run's displayed value traced the exact bug:</p>
+        <div class="spec-table">
+          <div class="spec-cell"><span class="k">We displayed</span><span class="v">446.2%</span></div>
+          <div class="spec-cell"><span class="k">Our code: e^logprob</span><span class="v">4.462 → logprob = 1.496</span></div>
+          <div class="spec-cell"><span class="k">mistral.rs: log10(x)</span><span class="v">x = 10^1.496 ≈ 31.3</span></div>
+          <div class="spec-cell"><span class="k">31.3 is</span><span class="v">an ordinary raw logit — not a probability</span></div>
+        </div>
+        <p>
+          A genuine log-probability requires softmax over the <em>entire</em>
+          49,152-token vocabulary first (<code>p = e^logit / Σ e^logit_j</code>)
+          — <code>sample_argmax</code> was skipping that sum entirely and taking
+          <code>log10</code> of the raw winning logit directly, which is why
+          the result could be positive (impossible for <code>ln(p)</code> or
+          <code>log10(p)</code> when <code>p ≤ 1</code>). Confirmed, not
+          just theorized: the same prompt at <code>temperature: 0.7</code>
+          (a real softmax-based sampling path, unaffected by the bug) produced
+          correctly bounded, meaningfully-varying values — 22.8% for a less
+          predictable word, 100.0% for a near-certain one.
+        </p>
+        <p>
+          Fixed defensively in <code>inferra-mistral</code> at the time via
+          an <code>is_greedy</code> gate plus <code>valid_logprob()</code>
+          rejecting any <code>logprob &gt; 0.0</code>. Verified upstream
+          against a local clone of <code>mistral.rs</code> at tag
+          <code>v0.9.3</code>: <code>sample_argmax</code> now runs
+          <code>candle_nn::ops::softmax_last_dim</code> before taking
+          <code>.ln()</code>, so the value is a real log-probability at any
+          temperature.
+        </p>
+        <div class="code-block">
+          <div class="label">mistralrs-core/src/sampler.rs — sample_argmax (0.9.3, fixed)</div>
+          <pre><span class="k">let</span> next_token = argmax_f32(&logits.to_vec1::&lt;f32&gt;()?)?;
+<span class="k">let</span> probs = candle_nn::ops::softmax_last_dim(&logits)?.to_vec1::&lt;f32&gt;()?;
+<span class="k">let</span> logprob = probs[next_token <span class="k">as</span> usize].ln();</pre>
+        </div>
+        <p>
+          We briefly upgraded to a <em>git</em> dependency pinned to
+          <code>tag = "v0.9.3"</code> once this was confirmed (crates.io only
+          has <code>mistralrs</code> published through <code>0.8.1</code> —
+          the <code>0.9.x</code> line exists as GitHub tags only) and removed
+          the <code>is_greedy</code> gate. That upgrade was reverted — see
+          the next entry — so <code>inferra-mistral</code> is back on
+          crates.io <code>"0.8"</code> and the <code>is_greedy</code> gate is
+          back in place. <code>valid_logprob()</code>'s sign check stays
+          regardless, as cheap defense-in-depth either way.
+        </p>
+      </div>
+
+      <div class="incident">
+        <span class="badge">Upstream regression — reverted upgrade</span>
+        <h4>0.9.3 fixed the logprobs bug but made unquantized CPU decode ~190x slower</h4>
+        <p>
+          After upgrading to confirm the fix above, real generation against
+          an unquantized (fp16-in-GGUF, computed as <code>BF16</code>) model
+          on this CPU-only Intel Mac went from usably fast to roughly one
+          token every 20 seconds. Two false leads were ruled out first with
+          direct evidence, not assumption: concurrent <code>cargo</code>
+          builds competing for CPU (real, but not the whole story — the same
+          slowdown reproduced with <em>nothing else running</em>, confirmed
+          via <code>ps</code>/Activity Monitor showing a single process at
+          100% CPU and still far too slow), and Accelerate not actually being
+          linked (<code>otool -L</code> confirmed it was).
+        </p>
+        <p>
+          The real cause: mistral.rs's own dtype-selection code
+          (<code>mistralrs-core/src/utils/normal.rs::determine_auto_dtype_all</code>)
+          has always special-cased the <code>accelerate</code> feature —
+          <code>#[cfg(feature = "accelerate")] return Ok(DType::BF16);</code>,
+          with the comment "we can safely use bf16 for accelerate because we
+          cast up to f32 in all matmuls anyway." That code is byte-identical
+          between mistral.rs 0.8.7 and 0.9.3 (checked directly against both
+          tags), which ruled out mistral.rs's own logic as the cause. What
+          differs is the <code>candle-core</code>/<code>candle-nn</code> git
+          commit each version pins: 0.8.7 uses <code>d2afd7f</code>
+          (v0.10.2), 0.9.3 uses <code>35d7ae7c</code> (v0.11.0-dev) — so the
+          "cast up to f32" upcast path in <em>candle itself</em> was the
+          prime suspect.
+        </p>
+        <p>Settled with a direct, isolated A/B test rather than more speculation — a standalone scratch binary built against each version, same model, same prompt, same token cap:</p>
+        <div class="spec-table">
+          <div class="spec-cell"><span class="k">mistralrs 0.8.1 (candle d2afd7f / v0.10.2)</span><span class="v">9.50 tok/s decode</span></div>
+          <div class="spec-cell"><span class="k">mistralrs 0.9.3 (candle 35d7ae7c / v0.11.0-dev)</span><span class="v">0.05 tok/s decode</span></div>
+          <div class="spec-cell"><span class="k">Ratio</span><span class="v">~190x slower on 0.9.3</span></div>
+        </div>
+        <p>
+          Quantized GGUF models (Q4_K_M etc.) are unaffected either way —
+          they run through dedicated SIMD dequant-matmul kernels that never
+          touch this dtype-selection path at all.
+        </p>
+        <p>
+          Decision: revert <code>mistralrs</code> to crates.io
+          <code>"0.8"</code>. For this app's actual use (a CPU-only learning
+          box, unquantized models included), a ~190x decode regression is a
+          bigger cost than a confidence report that's unavailable at
+          temperature 0. To avoid a repeat of editing source every time this
+          tradeoff gets re-evaluated, the <code>is_greedy</code> workaround
+          is now gated behind a Cargo feature, <code>greedy-logprobs</code>
+          (off by default, defined in <code>inferra-mistral/Cargo.toml</code>):
+          a future re-upgrade to a mistralrs version with the fix (once the
+          candle regression is also resolved upstream) is a config-only
+          change — flip the feature on, no source edit needed.
+        </p>
+      </div>
+
+      <div class="incident">
+        <span class="badge">Diagnostic, not a bug</span>
+        <h4>Generation looked 300x slower — it was build contention, not a regression</h4>
+        <p>
+          Right after the 0.9.3 upgrade, a real run showed 4 tokens in 92
+          seconds — roughly 0.04 tok/s, against a measured ~12.8 tok/s decode
+          on the same machine with <code>accelerate</code> enabled. Before
+          assuming a real regression, both explanations that would actually
+          matter were checked directly instead of guessed: does the built
+          binary still link <code>Accelerate.framework</code>
+          (<code>otool -L</code> confirmed yes), and does the
+          <code>accelerate</code> feature still reach
+          <code>candle-core</code>/<code>candle-nn</code> through the new
+          git dependency (traced through <code>mistralrs</code> →
+          <code>mistralrs-core</code>'s <code>Cargo.toml</code> — yes,
+          unchanged). Both ruled out a build misconfiguration.
+        </p>
+        <p>
+          Activity Monitor told the real story: <strong>nine separate
+          <code>rustc</code> processes</strong> at 78&ndash;92% CPU each,
+          all compiling the same heavy <code>mistralrs-core</code>/
+          <code>candle</code> dependency tree at once — leftover
+          verification builds (<code>cargo check</code>/<code>clippy</code>/
+          <code>test</code>) running concurrently with the desktop app's own
+          background rebuild and a live generation, all fighting for the
+          same physical cores on one Intel Mac. The model wasn't slow; it
+          was CPU-starved. Once the extra builds were stopped, generation
+          returned to its normal rate.
+        </p>
+        <p>
+          Lesson for this workspace specifically: <code>mistralrs-core</code>
+          is expensive enough to compile that running a verification
+          build (<code>cargo check</code>/<code>clippy</code>/<code>test</code>)
+          at the same time as measuring generation speed will make the
+          measurement meaningless — the fix is to let one finish before
+          starting the other, not to suspect the model or the hardware.
+        </p>
+      </div>
+    </section>
+
+    <section id="capabilities">
+      <h2>mistral.rs capabilities</h2>
+      <p class="section-dek">Verified against the real <code>mistralrs</code> source, not assumed — some wired up already, some not yet.</p>
+      <div class="cap-grid">
+        <div class="cap-card">
+          <span class="status available">Available</span>
+          <h4>Per-token sampling knobs</h4>
+          <p>top_k, min_p, frequency/presence/repetition penalty, stop_toks, logits_bias, DRY sampling — beyond the temperature/top_p/max_len we set today.</p>
+        </div>
+        <div class="cap-card">
+          <span class="status wired">In use</span>
+          <h4>Per-token log-probabilities</h4>
+          <p>
+            <code>RequestBuilder::return_logprobs(true)</code> returns each
+            generated token's own probability — surfaced as the "Token
+            confidence" report (Chat tab) and inline in the CLI's
+            <code>--stream</code> output. Its <code>top_logprobs</code>
+            alternatives only carry raw token IDs, not decoded text, so
+            there's nothing honest to show for those — only the chosen
+            token's confidence is real, displayable data. Only meaningful
+            above <code>temperature: 0</code> — see <a href="#bugs">Bugs found</a>.
+          </p>
+        </div>
+        <div class="cap-card">
+          <span class="status available">Available</span>
+          <h4>Custom logits processors</h4>
+          <p><code>add_logits_processor</code> accepts an <code>Arc&lt;dyn CustomLogitsProcessor&gt;</code> — an arbitrary hook into raw logits at every decode step.</p>
+        </div>
+        <div class="cap-card">
+          <span class="status wired">In use</span>
+          <h4>GPU / BLAS feature flags</h4>
+          <p><code>metal</code>, <code>accelerate</code>, <code>mkl</code>, <code>cuda</code>. Running <code>accelerate</code> after <code>metal</code> crashed at runtime on this machine's Intel/discrete-GPU combo.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="milestones">
+      <h2>Milestones</h2>
+      <ul class="milestones">
+        <li><span class="m-status done">Done</span><span class="m-text"><b>Backend boundary</b> <span>— non-streaming chat, embedded, not via mistralrs-server.</span></span></li>
+        <li><span class="m-status done">Done</span><span class="m-text"><b>Observability</b> <span>— streamed tokens, TTFT, decode tokens/s.</span></span></li>
+        <li><span class="m-status done">Done</span><span class="m-text"><b>Desktop</b> <span>— tabbed UI with live streaming, gauge, session history/latency charts.</span></span></li>
+        <li><span class="m-status next">Next</span><span class="m-text"><b>Artifacts</b> <span>— expand inferra-gguf from header reading to real tensor enumeration.</span></span></li>
+        <li><span class="m-status later">Later</span><span class="m-text"><b>Direct Candle</b> <span>— tokenize, load tensors, reproduce one model forward pass.</span></span></li>
+        <li><span class="m-status later">Later</span><span class="m-text"><b>Validation</b> <span>— compare token IDs, layer outputs, logits, greedy output, speed.</span></span></li>
+        <li><span class="m-status later">Later</span><span class="m-text"><b>Runtime study</b> <span>— KV cache, quantization, batching, memory planning, profiling.</span></span></li>
+      </ul>
+    </section>
+
+    <footer>
+      inferra.rs — mistral.rs is the reference runtime; GGUF learning remains isolated in <code>inferra-gguf</code>.
+    </footer>
+  </main>
+</div>

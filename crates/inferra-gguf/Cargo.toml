@@ -1,0 +1,16 @@
+[package]
+name = "inferra-gguf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+# Same GGUF reader mistral.rs itself uses to load models — real parsing and
+# dequantization, not a from-scratch reimplementation.
+candle-core = "0.10.2"
+nalgebra = "0.33"
+serde = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true

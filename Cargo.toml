@@ -1,0 +1,36 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/inferra-cli",
+    "apps/desktop/src-tauri",
+    "crates/inferra-app",
+    "crates/inferra-mistral",
+    "crates/inferra-ui-bridge",
+    "crates/inferra-core",
+    "crates/inferra-gguf",
+    "crates/inferra-hub",
+]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+anyhow = "1"
+async-trait = "0.1"
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+# Tauri release-size guideline: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

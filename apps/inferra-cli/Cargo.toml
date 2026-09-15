@@ -1,0 +1,20 @@
+[package]
+name = "inferra-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "inferra"
+path = "src/main.rs"
+
+[dependencies]
+inferra-app = { path = "../../crates/inferra-app" }
+inferra-mistral = { path = "../../crates/inferra-mistral" }
+clap.workspace = true
+inferra-core = { path = "../../crates/inferra-core" }
+inferra-gguf = { path = "../../crates/inferra-gguf" }
+tokio.workspace = true
+
+[lints]
+workspace = true

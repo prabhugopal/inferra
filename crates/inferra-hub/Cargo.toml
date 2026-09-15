@@ -1,0 +1,15 @@
+[package]
+name = "inferra-hub"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+hf-hub = { version = "0.4", default-features = false }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = ["rt", "sync"] }
+
+[lints]
+workspace = true

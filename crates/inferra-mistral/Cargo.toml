@@ -1,0 +1,24 @@
+[package]
+name = "inferra-mistral"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+either = "1"
+inferra-core = { path = "../inferra-core" }
+mistralrs = { version = "0.8", features = ["accelerate"] }
+tokio = { workspace = true, features = ["sync", "rt"] }
+
+[features]
+# Enable this when bumping `mistralrs` to a version where greedy (temperature
+# 0) sampling correctly applies softmax before computing log-probabilities
+# (confirmed fixed as of mistralrs 0.9.3 — see the note on `is_greedy` in
+# src/lib.rs). Toggling this is the only change needed on such an upgrade;
+# no source edits required.
+greedy-logprobs = []
+
+[lints]
+workspace = true

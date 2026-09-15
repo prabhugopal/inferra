@@ -1,0 +1,12 @@
+[package]
+name = "inferra-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+inferra-core = { path = "../inferra-core" }
+tokio = { workspace = true, features = ["sync"] }
+
+[lints]
+workspace = true
